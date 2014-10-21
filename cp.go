@@ -105,6 +105,10 @@ func (c *Cp) Implement(name string, fn interface{}) {
 	})
 }
 
+func (c *Cp) Impl(name string, fn interface{}) {
+	c.Implement(name, fn)
+}
+
 var fnHandlers = make(map[reflect.Type]func(interface{}, []interface{}))
 
 func AddFuncType(fnNilPtr interface{}, handler func(impls []interface{}) interface{}) {
@@ -125,7 +129,7 @@ func (c *Cp) Compose() {
 		fnType := reflect.TypeOf(fnPtr).Elem()
 		for _, implInfo := range impls {
 			if t := reflect.TypeOf(implInfo.v); t != fnType {
-				panic(sp("defined %v, implemented %v. defined at\n%s\nimplemented at\n%s", fnType, t, defInfo.trace, implInfo))
+				panic(sp("defined %v, implemented %v. defined at\n%simplemented at\n%s", fnType, t, defInfo.trace, implInfo.trace))
 			}
 		}
 		handler, ok := fnHandlers[fnType]
@@ -154,6 +158,8 @@ func (c *Cp) Compose() {
 				trace: defInfo.trace,
 			}
 		}
+		delete(c.defs, name)
+		delete(c.impls, name)
 	}
 
 	// match provides and requires
@@ -163,12 +169,13 @@ func (c *Cp) Compose() {
 		for _, requireInfo := range requireInfos {
 			requireValue := reflect.ValueOf(requireInfo.v).Elem()
 			if provideValue.Type() != requireValue.Type() {
-				panic(sp("%v provided, %v required. provided at\n%s\nrequired at\n%s", provideValue.Type(), requireValue.Type(),
+				panic(sp("%v provided, %v required. provided at\n%srequired at\n%s", provideValue.Type(), requireValue.Type(),
 					provideInfo.trace, requireInfo.trace))
 			}
 			requireValue.Set(provideValue)
 		}
 		delete(c.requires, name)
+		delete(c.provides, name)
 	}
 	for name, _ := range c.requires {
 		panic(sp("%s not provided", name))

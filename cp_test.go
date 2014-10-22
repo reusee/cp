@@ -84,6 +84,63 @@ func TestAll(t *testing.T) {
 	c.Impl("foo", func(int, int) {})
 	c.Compose()
 	f4(42, 42)
+
+	// combine
+	ok = false
+	c1 := New()
+	fn = nil
+	c1.Require("foo", &fn)
+	c2 := New()
+	c2.Provide("foo", func() {
+		ok = true
+	})
+	c1.Combine(c2)
+	c1.Compose()
+	if fn == nil {
+		t.Fatal()
+	}
+	fn()
+	if !ok {
+		t.Fatal()
+	}
+
+	c1.Provide("foo", 42)
+	c2 = New()
+	i = 0
+	c2.Require("foo", &i)
+	c1.Combine(c2)
+	c1.Compose()
+	if i != 42 {
+		t.Fatal()
+	}
+
+	ok = false
+	c1.Impl("foo", func() {
+		ok = true
+	})
+	c2 = New()
+	var foo func()
+	c2.Define("foo", &foo)
+	c1.Combine(c2)
+	c1.Compose()
+	foo()
+	if !ok {
+		t.Fatal()
+	}
+
+	ok = false
+	foo = nil
+	c1.Define("foo", &foo)
+	c2 = New()
+	c2.Impl("foo", func() {
+		ok = true
+	})
+	c1.Combine(c2)
+	c1.Compose()
+	foo()
+	if !ok {
+		t.Fatal()
+	}
 }
 
 func TestPanic(t *testing.T) {
@@ -128,6 +185,27 @@ func TestPanic(t *testing.T) {
 		defer checkErr("implementation of foo must be function")
 		c := New()
 		c.Impl("foo", 42)
+		c.Compose()
+	}()
+
+	func() {
+		defer checkErr("multiple provides of foo")
+		c := New()
+		c.Provide("foo", 42)
+		c2 := New()
+		c2.Provide("foo", 42)
+		c.Combine(c2)
+		c.Compose()
+	}()
+
+	func() {
+		defer checkErr("multiple defines of foo")
+		c := New()
+		var fn, fn2 func()
+		c.Define("foo", &fn)
+		c2 := New()
+		c2.Define("foo", &fn2)
+		c.Combine(c2)
 		c.Compose()
 	}()
 }

@@ -182,3 +182,24 @@ func (c *Cp) Compose() {
 	}
 
 }
+
+func (c *Cp) Combine(c2 *Cp) {
+	for name, info := range c2.provides {
+		if _, ok := c.provides[name]; ok {
+			panic(sp("multiple provides of %s", name))
+		}
+		c.provides[name] = info
+	}
+	for name, infos := range c2.requires {
+		c.requires[name] = append(c.requires[name], infos...)
+	}
+	for name, info := range c2.defs {
+		if _, ok := c.defs[name]; ok {
+			panic(sp("multiple defines of %s", name))
+		}
+		c.defs[name] = info
+	}
+	for name, infos := range c2.impls {
+		c.impls[name] = append(c.impls[name], infos...)
+	}
+}
